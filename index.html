@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Personal Trainer</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trainer">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="theme-color" content="#0a0a0a">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a; --dark: #111; --panel: #1a1a1a; --border: #2a2a2a;
+    --accent: #e8ff47; --accent2: #ff6b35; --rest-color: #47b8ff;
+    --text: #f0f0f0; --muted: #666;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--black); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+  .screen { display:none; min-height:100vh; }
+  .screen.active { display:flex; flex-direction:column; }
+
+  /* HOME */
+  #home { padding:40px 24px 0; gap:24px; overflow-y:auto; }
+  .home-header h1 { font-family:'Bebas Neue',sans-serif; font-size:64px; line-height:0.9; color:var(--accent); letter-spacing:2px; }
+  .home-header p { font-size:13px; color:var(--muted); margin-top:8px; letter-spacing:0.5px; text-transform:uppercase; }
+  .tempo-tag { font-size:11px; color:var(--accent); background:rgba(232,255,71,0.08); border:1px solid rgba(232,255,71,0.2); border-radius:20px; padding:4px 12px; display:inline-block; margin-top:10px; }
+  .day-cards { display:flex; flex-direction:column; gap:16px; }
+  .day-card { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:28px 24px; position:relative; overflow:hidden; }
+  .day-card::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--accent); }
+  .day-card.day-b::before { background:var(--accent2); }
+  .day-card .label { font-family:'Bebas Neue',sans-serif; font-size:48px; line-height:1; color:var(--accent); pointer-events:none; }
+  .day-card.day-b .label { color:var(--accent2); }
+  .day-card .exercises-list { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.6; pointer-events:none; }
+  .day-card .start-btn { margin-top:16px; background:var(--accent); color:var(--black); border:none; border-radius:10px; padding:16px 24px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:15px; cursor:pointer; text-transform:uppercase; width:100%; display:block; -webkit-appearance:none; touch-action:manipulation; }
+  .day-card.day-b .start-btn { background:var(--accent2); }
+  .day-card .start-btn:active { opacity:0.85; transform:scale(0.98); }
+
+  /* WORKOUT */
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--dark); border-bottom:1px solid var(--border); }
+  .topbar .back-btn { background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; }
+  .topbar .day-badge { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:2px; color:var(--accent); }
+  .topbar .ex-count { font-size:12px; color:var(--muted); }
+  .progress-track { height:3px; background:var(--border); }
+  .progress-fill { height:100%; background:var(--accent); transition:width 0.5s; }
+
+  .exercise-panel { padding:20px 20px 0; }
+  .exercise-name { font-family:'Bebas Neue',sans-serif; font-size:40px; line-height:1; }
+  .exercise-meta { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; margin-bottom:12px; }
+
+  /* INLINE WEIGHT EDITOR */
+  .inline-weight-editor { margin-bottom:16px; padding:12px 14px; background:rgba(232,255,71,0.04); border:1px solid rgba(232,255,71,0.15); border-radius:10px; }
+  .iwe-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; }
+  .iwe-row { display:flex; align-items:center; gap:6px; }
+  .iwe-btn { background:var(--border); border:none; color:var(--text); border-radius:8px; padding:8px 8px; font-size:12px; font-family:'DM Sans',sans-serif; font-weight:600; cursor:pointer; flex:1; touch-action:manipulation; -webkit-appearance:none; }
+  .iwe-btn:active { background:var(--accent); color:var(--black); }
+  .iwe-val { font-family:'Bebas Neue',sans-serif; font-size:24px; color:var(--accent); min-width:70px; text-align:center; flex-shrink:0; }
+  .set-dots { display:flex; gap:8px; margin-bottom:20px; }
+  .set-dot { width:32px; height:6px; border-radius:3px; background:var(--border); transition:background 0.3s; }
+  .set-dot.done { background:var(--accent); }
+  .set-dot.active { background:var(--accent); opacity:0.5; }
+
+  /* TEMPO BAR */
+  .tempo-section { margin:0 20px 16px; }
+  .tempo-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  .tempo-bar { display:flex; gap:4px; height:8px; }
+  .tempo-seg { flex:1; border-radius:2px; background:var(--border); transition:background 0.15s; }
+  .lit-up { background:var(--accent) !important; }
+  .lit-hold { background:#fff !important; }
+  .lit-down { background:var(--accent2) !important; }
+  .tempo-phase-text { font-size:10px; color:var(--muted); margin-top:5px; display:flex; justify-content:space-between; }
+
+  /* REP AREA */
+  .rep-area { display:flex; flex-direction:column; align-items:center; padding:0 20px; }
+  .phase-ind { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:3px; color:var(--muted); text-align:center; margin-bottom:8px; height:28px; transition:color 0.2s; }
+  .phase-ind.up { color:var(--accent); }
+  .phase-ind.hold { color:#fff; }
+  .phase-ind.down { color:var(--accent2); }
+
+  .rep-display { position:relative; width:180px; height:180px; margin-bottom:16px; }
+  .rep-svg { width:180px; height:180px; transform:rotate(-90deg); }
+  .rep-bg { fill:none; stroke:var(--border); stroke-width:8; }
+  .rep-fill { fill:none; stroke:var(--accent); stroke-width:8; stroke-linecap:round; stroke-dasharray:509; stroke-dashoffset:509; transition:stroke-dashoffset 0.3s,stroke 0.3s; }
+  .rep-fill.pumped { stroke:var(--accent2); }
+  .rep-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+  .rep-num { font-family:'Bebas Neue',sans-serif; font-size:80px; line-height:1; }
+  .rep-num.pumped { color:var(--accent2); }
+  .rep-of { font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+
+  .action-btn { width:100%; max-width:320px; border:none; border-radius:14px; padding:20px; font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; cursor:pointer; transition:all 0.15s; margin-bottom:10px; }
+  .action-btn.start { background:var(--accent); color:var(--black); }
+  .action-btn.running { background:var(--panel); border:1px solid var(--border); color:var(--muted); cursor:default; }
+  .action-btn.done { background:#333; color:var(--muted); cursor:default; }
+  .action-btn.start:active { transform:scale(0.97); }
+
+  .coach-bubble { background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:0 12px 12px 0; padding:14px 16px; font-size:14px; line-height:1.5; font-style:italic; margin:10px 20px 16px; min-height:52px; }
+
+  /* REST */
+  .rest-overlay { display:none; position:fixed; inset:0; background:rgba(10,10,10,0.97); z-index:100; flex-direction:column; align-items:center; justify-content:center; gap:20px; }
+  .rest-overlay.visible { display:flex; }
+  .rest-label { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:4px; color:var(--rest-color); }
+  .rest-circle { position:relative; width:160px; height:160px; }
+  .rest-circle svg { transform:rotate(-90deg); }
+  .rest-arc-bg { fill:none; stroke:var(--border); stroke-width:6; }
+  .rest-arc-fill { fill:none; stroke:var(--rest-color); stroke-width:6; stroke-linecap:round; stroke-dasharray:440; stroke-dashoffset:0; transition:stroke-dashoffset 1s linear; }
+  .rest-timer-inner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:'Bebas Neue',sans-serif; font-size:52px; line-height:1; }
+  .rest-next { font-size:13px; color:var(--muted); text-align:center; padding:0 32px; line-height:1.6; }
+  .rest-skip { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:10px 24px; font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; }
+
+  /* WEIGHT EDITOR */
+  .weight-editor { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px 20px; width:calc(100% - 48px); max-width:340px; }
+  .weight-editor-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; text-align:center; }
+  .weight-row { display:flex; align-items:center; justify-content:center; gap:8px; }
+  .weight-btn { background:var(--border); border:none; color:var(--text); border-radius:8px; padding:8px 10px; font-size:12px; font-family:'DM Sans',sans-serif; font-weight:600; cursor:pointer; flex-shrink:0; transition:background 0.15s; min-width:44px; }
+  .weight-btn:active { background:var(--accent); color:var(--black); }
+  .weight-val { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--accent); min-width:80px; text-align:center; }
+
+  /* DONE */
+  #done { align-items:center; justify-content:center; padding:40px 24px; text-align:center; gap:20px; }
+  .done-emoji { font-size:64px; }
+  .done-title { font-family:'Bebas Neue',sans-serif; font-size:56px; color:var(--accent); line-height:1; }
+  .done-sub { font-size:15px; color:var(--muted); line-height:1.8; }
+  .done-btn { background:var(--accent); color:var(--black); border:none; border-radius:12px; padding:16px 40px; font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; cursor:pointer; margin-top:16px; }
+
+  @keyframes repPop { 0%,100%{transform:scale(1)} 40%{transform:scale(1.12)} }
+  .pop { animation:repPop 0.35s ease; }
+
+  /* EXERCISE LIST DRAWER */
+  .drawer-toggle {
+    display:flex; align-items:center; justify-content:space-between;
+    margin:0 20px 12px; padding:10px 14px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    cursor:pointer; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .drawer-toggle span { color:var(--accent); font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:1px; }
+
+  .exercise-drawer {
+    display:none; margin:0 20px 12px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    overflow:hidden;
+  }
+  .exercise-drawer.open { display:block; }
+
+  .drawer-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; border-bottom:1px solid var(--border); gap:8px;
+  }
+  .drawer-item:last-child { border-bottom:none; }
+  .drawer-item.current { background:rgba(232,255,71,0.06); }
+  .drawer-item.skipped { opacity:0.35; }
+  .drawer-item.completed { opacity:0.4; }
+
+  .drawer-item-left { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+  .drawer-item-num { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--muted); width:18px; flex-shrink:0; }
+  .drawer-item-num.cur-num { color:var(--accent); }
+  .drawer-item-name { font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .drawer-item-name.cur-name { color:var(--accent); font-weight:600; }
+  .drawer-item-detail { font-size:10px; color:var(--muted); }
+
+  .skip-btn {
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    border-radius:6px; padding:4px 10px; font-size:10px; cursor:pointer;
+    white-space:nowrap; flex-shrink:0; font-family:'DM Sans',sans-serif;
+    text-transform:uppercase; letter-spacing:0.3px;
+  }
+  .skip-btn:active { background:var(--border); }
+  .done-check { color:var(--accent); font-size:14px; flex-shrink:0; }
+
+  /* VOICE SELECTOR */
+  .voice-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; background:var(--panel); border-top:1px solid var(--border);
+    gap:10px; position:sticky; bottom:0; margin-top:auto;
+  }
+  .voice-bar-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+  .voice-select {
+    flex:1; background:var(--dark); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px;
+    cursor:pointer; appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 10px center; padding-right:28px;
+  }
+  .voice-select:focus { outline:none; border-color:var(--accent); }
+  .voice-test-btn {
+    background:var(--border); border:none; color:var(--text); border-radius:8px;
+    padding:8px 12px; font-size:13px; cursor:pointer; white-space:nowrap; flex-shrink:0;
+  }
+  .voice-test-btn:active { background:var(--accent); color:var(--black); }
+</style>
+</head>
+<body>
+
+<div id="home" class="screen active">
+  <div class="home-header">
+    <h1>TRAIN<br>HARD</h1>
+    <p>Personal trainer — David</p>
+    <div class="tempo-tag">⏱ Tempo 2-1-3 · hypertrofie</div>
+  </div>
+  <div class="day-cards">
+    <div class="day-card">
+      <div class="label">DAG A</div>
+      <div class="exercises-list">Leg Press · Chest Press · Lat Pulldown<br>Seated Row · Triceps · Bicep Curl · Cable Crunch</div>
+      <button class="start-btn" onclick="startWorkout('A')">Start Dag A →</button>
+    </div>
+    <div class="day-card day-b">
+      <div class="label">DAG B</div>
+      <div class="exercises-list">Leg Extension · Leg Curls · Chest Press · Push Up<br>Lat Pulldown · Seated Row · Lateral Raise · Hanging Leg Raise</div>
+      <button class="start-btn" onclick="startWorkout('B')">Start Dag B →</button>
+    </div>
+  </div>
+  <div style="font-size:11px;color:var(--muted);text-align:center;padding-bottom:8px;">De trainer telt automatisch. Zet volume aan.</div>
+  <div class="voice-bar">
+    <div class="voice-bar-label">🎙 Stem</div>
+    <select class="voice-select" id="voice-select" onchange="onVoiceSelect()">
+      <option value="">Laden…</option>
+    </select>
+    <button class="voice-test-btn" onclick="testVoice()">▶ Test</button>
+  </div>
+</div>
+
+<div id="workout" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div class="day-badge" id="day-badge">DAG A</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="ex-count" id="ex-count">1/7</div>
+      <button class="voice-test-btn" onclick="toggleVoicePanel()" style="padding:6px 10px;font-size:11px;">🎙</button>
+    </div>
+  </div>
+
+  <!-- inline voice panel for during workout -->
+  <div id="workout-voice-panel" style="display:none;background:var(--panel);border-bottom:1px solid var(--border);padding:10px 16px;display:none;align-items:center;gap:10px;">
+    <div style="font-size:11px;color:var(--muted);white-space:nowrap;">Stem:</div>
+    <select class="voice-select" id="voice-select-workout" onchange="onVoiceSelectWorkout()" style="flex:1;font-size:12px;padding:6px 28px 6px 8px;">
+      <option value="">Laden…</option>
+    </select>
+    <button class="voice-test-btn" onclick="testVoice()" style="font-size:12px;padding:6px 10px;">▶</button>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="exercise-panel">
+    <div class="exercise-name" id="exercise-name">Leg Press</div>
+    <div class="exercise-meta" id="exercise-meta"></div>
+
+    <!-- Inline weight editor — visible before set starts -->
+    <div class="inline-weight-editor" id="inline-weight-editor">
+      <div class="iwe-label">Gewicht aanpassen</div>
+      <div class="iwe-row">
+        <button class="iwe-btn" onclick="adjustInlineWeight(-2.5)">−2.5</button>
+        <button class="iwe-btn" onclick="adjustInlineWeight(-1.25)">−1.25</button>
+        <div class="iwe-val" id="inline-weight-val">40 kg</div>
+        <button class="iwe-btn" onclick="adjustInlineWeight(1.25)">+1.25</button>
+        <button class="iwe-btn" onclick="adjustInlineWeight(2.5)">+2.5</button>
+      </div>
+    </div>
+
+    <div class="set-dots" id="set-dots"></div>
+  </div>
+  <div class="tempo-section">
+    <div class="tempo-label">Tempo</div>
+    <div class="tempo-bar" id="tempo-bar"></div>
+    <div class="tempo-phase-text"><span>Omhoog (2s)</span><span>Pauze (1s)</span><span>Neer (3s)</span></div>
+  </div>
+  <div class="rep-area">
+    <div class="phase-ind" id="phase-ind">—</div>
+    <div class="rep-display">
+      <svg class="rep-svg" viewBox="0 0 180 180">
+        <circle class="rep-bg" cx="90" cy="90" r="81"/>
+        <circle class="rep-fill" id="rep-arc" cx="90" cy="90" r="81"/>
+      </svg>
+      <div class="rep-inner">
+        <div class="rep-num" id="rep-num">0</div>
+        <div class="rep-of" id="rep-of">van 12</div>
+      </div>
+    </div>
+    <button class="action-btn start" id="action-btn" onclick="handleBtn()">START SET</button>
+  </div>
+  <div class="drawer-toggle" onclick="toggleDrawer()">
+    <div>📋 Oefeningen overzicht</div>
+    <span id="drawer-arrow">▼</span>
+  </div>
+  <div class="exercise-drawer" id="exercise-drawer"></div>
+
+  <div class="coach-bubble" id="coach-bubble">Klaar? Druk op START SET.</div>
+</div>
+
+<div class="rest-overlay" id="rest-overlay">
+  <div class="rest-label">RUST</div>
+  <div class="rest-circle">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <circle class="rest-arc-bg" cx="80" cy="80" r="70"/>
+      <circle class="rest-arc-fill" id="rest-arc" cx="80" cy="80" r="70"/>
+    </svg>
+    <div class="rest-timer-inner" id="rest-timer">90</div>
+  </div>
+  <div class="rest-next" id="rest-next"></div>
+
+  <!-- WEIGHT EDITOR -->
+  <div class="weight-editor" id="weight-editor">
+    <div class="weight-editor-label" id="weight-editor-label">Gewicht volgende oefening</div>
+    <div class="weight-row">
+      <button class="weight-btn" onclick="adjustWeight(-2.5)">−2.5</button>
+      <button class="weight-btn" onclick="adjustWeight(-1.25)">−1.25</button>
+      <div class="weight-val" id="weight-val">40 kg</div>
+      <button class="weight-btn" onclick="adjustWeight(1.25)">+1.25</button>
+      <button class="weight-btn" onclick="adjustWeight(2.5)">+2.5</button>
+    </div>
+  </div>
+
+  <button class="rest-skip" onclick="skipRest()">Sla rust over</button>
+</div>
+
+<div id="done" class="screen">
+  <div class="done-emoji">💪</div>
+  <div class="done-title">KLAAR!</div>
+  <div class="done-sub" id="done-sub">Geweldig getraind.</div>
+  <button class="done-btn" onclick="goHome()">← Terug</button>
+</div>
+
+<script>
+const workouts = {
+  A:[
+    {name:"Leg Press Horizontal",kg:75,sets:[{reps:8},{reps:10},{reps:12}],rest:120},
+    {name:"Chest Press",kg:40,sets:[{reps:10},{reps:10},{reps:10}],rest:120},
+    {name:"Lat Pulldown",kg:65,sets:[{reps:10},{reps:10},{reps:10}],rest:120},
+    {name:"Seated Row",kg:50,sets:[{reps:10},{reps:10},{reps:10}],rest:90},
+    {name:"Triceps Pushdown",kg:70,sets:[{reps:12},{reps:12},{reps:12}],rest:90},
+    {name:"Bicep Curl",kg:15,sets:[{reps:12},{reps:12},{reps:12}],rest:90},
+    {name:"Cable Crunch",kg:null,sets:[{reps:15},{reps:15},{reps:15}],rest:60},
+  ],
+  B:[
+    {name:"Leg Extension",kg:40,sets:[{reps:12},{reps:12},{reps:12}],rest:90,unilateral:true},
+    {name:"Standing Leg Curls",kg:13,sets:[{reps:12},{reps:12},{reps:12}],rest:90,unilateral:true},
+    {name:"Chest Press",kg:40,sets:[{reps:12},{reps:12},{reps:12}],rest:120},
+    {name:"Push Up",kg:null,sets:[{reps:10},{reps:10},{reps:10}],rest:120},
+    {name:"Lat Pulldown",kg:55,sets:[{reps:12},{reps:12},{reps:12}],rest:90},
+    {name:"Seated Row",kg:45,sets:[{reps:12},{reps:12},{reps:12}],rest:90},
+    {name:"Lateral Raise",kg:5,sets:[{reps:15},{reps:15},{reps:15}],rest:90},
+    {name:"Hanging Leg Raise",kg:null,sets:[{reps:15},{reps:15},{reps:15}],rest:60},
+  ]
+};
+
+const TEMPO_UP=2000, TEMPO_HOLD=1000, TEMPO_DOWN=3000;
+let currentDay='A', exIdx=0, setIdx=0, currentRep=0, targetRep=0;
+let setRunning=false, setFinished=false;
+let unilateralPhase=null; // null | 'rechts' | 'links'
+let restIntervalId=null, phaseTimeoutId=null;
+const synth=window.speechSynthesis;
+let femaleVoice=null;
+
+// ── VOICE SYSTEM ──
+let allVoices=[];
+let selectedVoice=null;
+const VOICE_STORAGE_KEY='trainer_voice_v1';
+
+function populateVoiceDropdowns(){
+  allVoices=synth.getVoices();
+  if(!allVoices.length) return;
+
+  // Sort: Dutch first, then others
+  const sorted=[
+    ...allVoices.filter(v=>v.lang.startsWith('nl')),
+    ...allVoices.filter(v=>!v.lang.startsWith('nl'))
+  ];
+
+  const savedName=localStorage.getItem(VOICE_STORAGE_KEY)||'';
+
+  ['voice-select','voice-select-workout'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML='';
+    sorted.forEach(v=>{
+      const opt=document.createElement('option');
+      opt.value=v.name;
+      // Show language tag + name, mark Dutch
+      const langTag=v.lang.startsWith('nl')?'🇳🇱 ':'';
+      opt.textContent=langTag+v.name+' ('+v.lang+')';
+      if(v.name===savedName) opt.selected=true;
+      sel.appendChild(opt);
+    });
+    // If nothing matched saved, keep first
+  });
+
+  // Apply saved or pick best Dutch female
+  if(savedName){
+    selectedVoice=sorted.find(v=>v.name===savedName)||null;
+  }
+  if(!selectedVoice) selectedVoice=pickBestVoice(sorted);
+
+  // Sync both dropdowns to selected
+  syncDropdowns();
+}
+
+function pickBestVoice(voices){
+  const nl=voices.filter(v=>v.lang.startsWith('nl'));
+  const maleNames=/xander|male/i;
+  const femaleNames=/fenna|lotte|ellen|claire|anne|inge|eva|sara/i;
+  return nl.find(v=>femaleNames.test(v.name)&&!maleNames.test(v.name))
+      || nl.find(v=>!maleNames.test(v.name))
+      || nl[0]
+      || voices[0]
+      || null;
+}
+
+function syncDropdowns(){
+  if(!selectedVoice) return;
+  ['voice-select','voice-select-workout'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(sel) sel.value=selectedVoice.name;
+  });
+}
+
+function onVoiceSelect(){
+  const name=document.getElementById('voice-select').value;
+  applyVoice(name);
+}
+function onVoiceSelectWorkout(){
+  const name=document.getElementById('voice-select-workout').value;
+  applyVoice(name);
+}
+function applyVoice(name){
+  selectedVoice=allVoices.find(v=>v.name===name)||selectedVoice;
+  syncDropdowns();
+  try{ localStorage.setItem(VOICE_STORAGE_KEY, name); }catch(e){}
+}
+
+function testVoice(){
+  speak('Hallo David! Dit is jouw personal trainer. Klaar om te trainen?');
+}
+
+function toggleVoicePanel(){
+  const p=document.getElementById('workout-voice-panel');
+  p.style.display=(p.style.display==='none'||p.style.display==='')?'flex':'none';
+}
+
+// Load voices — iOS needs event + retries
+synth.onvoiceschanged=populateVoiceDropdowns;
+populateVoiceDropdowns();
+setTimeout(populateVoiceDropdowns,500);
+setTimeout(populateVoiceDropdowns,1500);
+
+function speak(text,rate=0.95){
+  if(!selectedVoice && allVoices.length===0) populateVoiceDropdowns();
+  synth.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=selectedVoice?.lang||'nl-NL';
+  u.rate=rate; u.pitch=1.1; u.volume=1;
+  if(selectedVoice) u.voice=selectedVoice;
+  synth.speak(u);
+}
+
+function buildTempoBar(){
+  const bar=document.getElementById('tempo-bar');
+  bar.innerHTML='';
+  for(let i=0;i<2;i++){const s=document.createElement('div');s.className='tempo-seg';s.dataset.t='up';bar.appendChild(s);}
+  {const s=document.createElement('div');s.className='tempo-seg';s.dataset.t='hold';bar.appendChild(s);}
+  for(let i=0;i<3;i++){const s=document.createElement('div');s.className='tempo-seg';s.dataset.t='down';bar.appendChild(s);}
+}
+
+function litBar(phase){
+  document.querySelectorAll('.tempo-seg').forEach(s=>{
+    s.classList.remove('lit-up','lit-hold','lit-down');
+    if(phase==='up'&&s.dataset.t==='up') s.classList.add('lit-up');
+    if(phase==='hold'&&s.dataset.t==='hold') s.classList.add('lit-hold');
+    if(phase==='down'&&s.dataset.t==='down') s.classList.add('lit-down');
+  });
+}
+
+function setPhaseUI(cls,text){
+  const el=document.getElementById('phase-ind');
+  el.className='phase-ind '+cls;
+  el.textContent=text;
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome(){
+  synth.cancel();
+  clearTimeout(phaseTimeoutId);
+  clearInterval(restIntervalId);
+  setRunning=false;
+  document.getElementById('rest-overlay').classList.remove('visible');
+  showScreen('home');
+}
+
+// exerciseOrder holds indices into workouts[currentDay] — allows reordering for skips
+let exerciseOrder=[];
+let drawerOpen=false;
+
+function toggleDrawer(){
+  drawerOpen=!drawerOpen;
+  document.getElementById('exercise-drawer').classList.toggle('open',drawerOpen);
+  document.getElementById('drawer-arrow').textContent=drawerOpen?'▲':'▼';
+  if(drawerOpen) renderDrawer();
+}
+
+function renderDrawer(){
+  const drawer=document.getElementById('exercise-drawer');
+  const exercises=workouts[currentDay];
+  drawer.innerHTML='';
+  exerciseOrder.forEach((origIdx,pos)=>{
+    const ex=exercises[origIdx];
+    const isCurrent=(pos===exIdx);
+    const isDone=(pos<exIdx);
+    const item=document.createElement('div');
+    item.className='drawer-item'+(isCurrent?' current':isDone?' completed':'');
+
+    // Tappable for future exercises: jump to it
+    if(!isDone && !isCurrent){
+      item.style.cursor='pointer';
+      item.onclick=()=>jumpToExercise(pos);
+    }
+
+    const left=document.createElement('div');
+    left.className='drawer-item-left';
+    const num=document.createElement('div');
+    num.className='drawer-item-num'+(isCurrent?' cur-num':'');
+    num.textContent=pos+1;
+    const info=document.createElement('div');
+    info.style.minWidth='0';
+    const name=document.createElement('div');
+    name.className='drawer-item-name'+(isCurrent?' cur-name':'');
+    name.textContent=ex.name;
+    const detail=document.createElement('div');
+    detail.className='drawer-item-detail';
+    const kg=getWeight(currentDay,origIdx);
+    detail.textContent=`${ex.sets.length} sets · ${kg!==null?formatKg(kg)+'kg · ':''}${ex.sets[0].reps} reps`;
+    info.appendChild(name); info.appendChild(detail);
+    left.appendChild(num); left.appendChild(info);
+    item.appendChild(left);
+
+    if(isDone){
+      const chk=document.createElement('div');
+      chk.className='done-check'; chk.textContent='✓';
+      item.appendChild(chk);
+    } else if(isCurrent){
+      const btn=document.createElement('button');
+      btn.className='skip-btn'; btn.textContent='Sla over';
+      btn.onclick=(e)=>{e.stopPropagation(); skipCurrentExercise();};
+      item.appendChild(btn);
+    } else {
+      const hint=document.createElement('div');
+      hint.style.cssText='font-size:10px;color:var(--accent);opacity:0.7;flex-shrink:0;';
+      hint.textContent='→ tik';
+      item.appendChild(hint);
+    }
+    drawer.appendChild(item);
+  });
+}
+
+function jumpToExercise(pos){
+  // Stop any running set
+  if(setRunning){ synth.cancel(); clearTimeout(phaseTimeoutId); setRunning=false; }
+  clearInterval(restIntervalId);
+  document.getElementById('rest-overlay').classList.remove('visible');
+
+  // Move exercises between current and target to end (skip them)
+  // But only skip future ones, keep order of skipped at end
+  if(pos<=exIdx) return;
+
+  // Move all exercises from exIdx..pos-1 (not yet done) to after pos
+  const skipped=exerciseOrder.splice(exIdx, pos-exIdx);
+  // Insert them after what is now at exIdx (which was pos)
+  exerciseOrder.splice(exIdx+1, 0, ...skipped);
+
+  setIdx=0;
+  loadExercise();
+  const ex=workouts[currentDay][exerciseOrder[exIdx]];
+  speak(`Gesprongen naar ${ex.name}.`);
+  if(drawerOpen) renderDrawer();
+}
+
+function skipExercise(pos){
+  if(pos<=exIdx) return;
+  const moved=exerciseOrder.splice(pos,1)[0];
+  exerciseOrder.push(moved);
+  renderDrawer();
+  speak('Oefening verplaatst naar het einde.');
+}
+
+function skipCurrentExercise(){
+  if(setRunning){ synth.cancel(); clearTimeout(phaseTimeoutId); setRunning=false; }
+  const moved=exerciseOrder.splice(exIdx,1)[0];
+  exerciseOrder.push(moved);
+  if(exIdx>=exerciseOrder.length){ endWorkout(); return; }
+  loadExercise();
+  const ex=workouts[currentDay][exerciseOrder[exIdx]];
+  speak(`Overgeslagen. Volgende: ${ex.name}.`);
+  if(drawerOpen) renderDrawer();
+}
+
+function startWorkout(day){
+  requestWakeLock();
+  currentDay=day; exIdx=0; setIdx=0; drawerOpen=false;
+  exerciseOrder=workouts[day].map((_,i)=>i);
+  showScreen('workout');
+  buildTempoBar();
+  document.getElementById('day-badge').textContent='DAG '+day;
+  document.getElementById('drawer-arrow').textContent='▼';
+  document.getElementById('exercise-drawer').classList.remove('open');
+  loadExercise();
+  const ex=workouts[day][0];
+  setTimeout(()=>{
+    speak(`Dag ${day}. We beginnen met ${ex.name}. ${ex.kg?ex.kg+' kilo,':''} ${ex.sets[0].reps} herhalingen. Druk op start als je klaar staat.`);
+  },500);
+}
+
+function loadExercise(){
+  const exercises=workouts[currentDay];
+  const ex=exercises[exerciseOrder[exIdx]];
+  const set=ex.sets[setIdx];
+  targetRep=set.reps; currentRep=0; setRunning=false; setFinished=false;
+
+  document.getElementById('exercise-name').textContent=ex.name;
+  const kg=getWeight(currentDay,exerciseOrder[exIdx]);
+  document.getElementById('exercise-meta').textContent=`Set ${setIdx+1} van ${ex.sets.length} · ${kg!==null?formatKg(kg)+' kg · ':''}${targetRep} reps`;
+  document.getElementById('ex-count').textContent=`${exIdx+1}/${exerciseOrder.length}`;
+  document.getElementById('progress-fill').style.width=(exIdx/exerciseOrder.length*100)+'%';
+
+  const dots=document.getElementById('set-dots');
+  dots.innerHTML='';
+  for(let i=0;i<ex.sets.length;i++){
+    const d=document.createElement('div');
+    d.className='set-dot'+(i<setIdx?' done':i===setIdx?' active':'');
+    dots.appendChild(d);
+  }
+
+  updateRepUI(0,targetRep);
+  litBar('none');
+  setPhaseUI('','—');
+
+  const btn=document.getElementById('action-btn');
+  btn.textContent='START SET';
+  btn.className='action-btn start';
+  document.getElementById('coach-bubble').textContent='Klaar? Druk op START SET.';
+  showInlineWeightEditor(); // show before set starts
+  if(drawerOpen) renderDrawer();
+}
+
+function updateRepUI(rep,target){
+  const arc=document.getElementById('rep-arc');
+  const numEl=document.getElementById('rep-num');
+  const circ=2*Math.PI*81;
+  arc.style.strokeDashoffset=circ-(rep/target)*circ;
+  const done=rep>=target;
+  arc.classList.toggle('pumped',done);
+  numEl.classList.toggle('pumped',done);
+  numEl.textContent=rep;
+  document.getElementById('rep-of').textContent=`van ${target}`;
+}
+
+function popNum(){
+  const el=document.getElementById('rep-num');
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+function handleBtn(){
+  if(!setRunning && !setFinished) startSet();
+}
+
+function startSet(){
+  setRunning=true; currentRep=0;
+  hideInlineWeightEditor();
+  updateRepUI(0,targetRep);
+
+  // Unilateral: begin met rechts
+  const ex=workouts[currentDay][exerciseOrder[exIdx]];
+  unilateralPhase=ex.unilateral ? 'rechts' : null;
+
+  const btn=document.getElementById('action-btn');
+  btn.textContent='3…';
+  btn.className='action-btn running';
+  document.getElementById('coach-bubble').textContent='Klaar maken…';
+
+  speak('Drie.',1.0);
+  setTimeout(()=>{ if(setRunning){ btn.textContent='2…'; speak('Twee.',1.0); }},1000);
+  setTimeout(()=>{ if(setRunning){ btn.textContent='1…'; speak('Één.',1.0); }},2000);
+  setTimeout(()=>{
+    if(!setRunning) return;
+    btn.textContent='BEZIG…';
+    if(unilateralPhase){
+      document.getElementById('coach-bubble').textContent='Rechts — volg het tempo.';
+      speak('Los! Rechts. Één. Omhoog.',1.0);
+    } else {
+      document.getElementById('coach-bubble').textContent='Volg het tempo — omhoog, vasthouden, neer.';
+      speak('Los! Één. Omhoog.',1.0);
+    }
+    runRep();
+  },3000);
+}
+
+function runRep(){
+  if(!setRunning) return;
+  const repNum=currentRep+1;
+
+  // "Omhoog" — start beweging
+  setPhaseUI('up','OMHOOG'); litBar('up');
+  speak('Omhoog.',1.1);
+
+  // Na 1s: zeg nummer
+  phaseTimeoutId=setTimeout(()=>{
+    if(!setRunning) return;
+    speak(`${repNum}.`,1.1);
+
+    // Na nog 1s: vasthouden (totaal 2s up)
+    phaseTimeoutId=setTimeout(()=>{
+      if(!setRunning) return;
+      setPhaseUI('hold','VASTHOUDEN'); litBar('hold');
+      speak('Vasthouden.',1.1);
+
+      // Na 1s hold: neer
+      phaseTimeoutId=setTimeout(()=>{
+        if(!setRunning) return;
+        setPhaseUI('down','NEER'); litBar('down');
+        speak('Neer.',1.0);
+
+        // Na 3s neer: rep klaar
+        phaseTimeoutId=setTimeout(()=>{
+          if(!setRunning) return;
+          currentRep++;
+          updateRepUI(currentRep,targetRep);
+          popNum();
+
+          const remaining=targetRep-currentRep;
+
+          if(remaining===0){
+            if(unilateralPhase==='rechts'){
+              // Wissel naar links
+              unilateralPhase='links';
+              currentRep=0;
+              updateRepUI(0,targetRep);
+              litBar('none'); setPhaseUI('','');
+              document.getElementById('coach-bubble').textContent='💪 Rechts klaar! Nu links.';
+              const btn=document.getElementById('action-btn');
+              btn.textContent='3…';
+              speak('Rechts klaar! Wissel naar links. Drie.',0.95);
+              setTimeout(()=>{ if(setRunning){ btn.textContent='2…'; speak('Twee.',1.0); }},1000);
+              setTimeout(()=>{ if(setRunning){ btn.textContent='1…'; speak('Één.',1.0); }},2000);
+              setTimeout(()=>{
+                if(!setRunning) return;
+                btn.textContent='BEZIG…';
+                document.getElementById('coach-bubble').textContent='Links — volg het tempo.';
+                speak('Los! Omhoog.',1.0);
+                runRep();
+              },3000);
+            } else {
+              setRunning=false; setFinished=true;
+              litBar('none'); setPhaseUI('','✓');
+              speak('Klaar! Goed gedaan.',0.95);
+              document.getElementById('coach-bubble').textContent='💥 Set klaar! Rust begint.';
+              document.getElementById('action-btn').textContent='✓ SET KLAAR';
+              document.getElementById('action-btn').className='action-btn done';
+              setTimeout(()=>afterSet(),1200);
+            }
+          } else if(remaining===2){
+            document.getElementById('coach-bubble').textContent='🔥 Nog twee — geef alles!';
+            runRep();
+          } else if(remaining===1){
+            document.getElementById('coach-bubble').textContent='💪 Laatste herhaling — alles eruit!';
+            runRep();
+          } else {
+            runRep();
+          }
+        },TEMPO_DOWN); // 3000ms neer
+      },TEMPO_HOLD);   // 1000ms hold
+    },1000);           // 2e helft up
+  },1000);             // 1e helft up
+}
+
+// weightOverrides: { 'A:0': 80, 'B:3': 12, ... } — keyed by day:exerciseIndex
+const weightOverrides={};
+
+function getWeight(day, origIdx){
+  const key=`${day}:${origIdx}`;
+  const ex=workouts[day][origIdx];
+  if(weightOverrides[key]!==undefined) return weightOverrides[key];
+  return ex.kg;
+}
+
+function adjustWeight(delta){
+  const exercises=workouts[currentDay];
+  // During rest: editing the NEXT exercise's weight
+  const targetOrigIdx=restEditingOrigIdx;
+  if(targetOrigIdx===null||targetOrigIdx===undefined) return;
+  const key=`${currentDay}:${targetOrigIdx}`;
+  const current=getWeight(currentDay,targetOrigIdx);
+  if(current===null) return; // bodyweight exercise, no kg
+  const newVal=Math.max(0, Math.round((current+delta)*100)/100);
+  weightOverrides[key]=newVal;
+  document.getElementById('weight-val').textContent=formatKg(newVal)+' kg';
+  // Update the exercise meta display if it's the current exercise
+  updateExerciseMeta();
+}
+
+function formatKg(val){
+  return val%1===0 ? val : val.toFixed(2).replace(/\.?0+$/,'');
+}
+
+function updateExerciseMeta(){
+  const ex=workouts[currentDay][exerciseOrder[exIdx]];
+  const kg=getWeight(currentDay,exerciseOrder[exIdx]);
+  const set=ex.sets[setIdx];
+  document.getElementById('exercise-meta').textContent=
+    `Set ${setIdx+1} van ${ex.sets.length} · ${kg!==null?formatKg(kg)+' kg · ':''}${set.reps} reps`;
+}
+
+let restEditingOrigIdx=null; // which exercise we're editing weight for during rest
+
+function afterSet(){
+  const exercises=workouts[currentDay];
+  const ex=exercises[exerciseOrder[exIdx]];
+  const isLastSet=setIdx>=ex.sets.length-1;
+  const isLastEx=exIdx>=exerciseOrder.length-1;
+  if(isLastSet&&isLastEx){ endWorkout(); return; }
+  startRest(ex.rest,isLastSet);
+}
+
+function startRest(seconds,isLastSet){
+  const exercises=workouts[currentDay];
+  const ex=exercises[exerciseOrder[exIdx]];
+
+  // Determine which exercise weight to edit during rest
+  let editIdx=null;
+  if(isLastSet && exIdx+1<exerciseOrder.length){
+    editIdx=exerciseOrder[exIdx+1]; // next exercise
+  } else if(!isLastSet){
+    editIdx=exerciseOrder[exIdx]; // same exercise next set
+  }
+  restEditingOrigIdx=editIdx;
+
+  // Build "next" text using current weight
+  let nextText='';
+  if(isLastSet && exIdx+1<exerciseOrder.length){
+    const nextEx=exercises[exerciseOrder[exIdx+1]];
+    const nextKg=getWeight(currentDay,exerciseOrder[exIdx+1]);
+    nextText=`Volgende: ${nextEx.name}${nextKg!==null?' — '+formatKg(nextKg)+' kg':''}`;
+  } else {
+    nextText=`Volgende: set ${setIdx+2} — ${ex.sets[setIdx+1].reps} reps`;
+  }
+  document.getElementById('rest-next').textContent=nextText;
+
+  // Weight editor
+  const editorEl=document.getElementById('weight-editor');
+  const editorLabel=document.getElementById('weight-editor-label');
+  const weightValEl=document.getElementById('weight-val');
+  if(editIdx!==null && getWeight(currentDay,editIdx)!==null){
+    const editEx=exercises[editIdx];
+    const kg=getWeight(currentDay,editIdx);
+    editorLabel.textContent=isLastSet?`Gewicht: ${editEx.name}`:`Gewicht set ${setIdx+2}`;
+    weightValEl.textContent=formatKg(kg)+' kg';
+    editorEl.style.display='block';
+  } else {
+    editorEl.style.display='none';
+  }
+
+  const arc=document.getElementById('rest-arc');
+  const timerEl=document.getElementById('rest-timer');
+  const circ=2*Math.PI*70;
+  arc.style.strokeDasharray=circ; arc.style.strokeDashoffset=0;
+  let rem=seconds; timerEl.textContent=rem;
+  document.getElementById('rest-overlay').classList.add('visible');
+  speak(`Rust. ${seconds} seconden.`);
+
+  clearInterval(restIntervalId);
+  restIntervalId=setInterval(()=>{
+    rem--;
+    timerEl.textContent=rem;
+    arc.style.strokeDashoffset=((seconds-rem)/seconds)*circ;
+    if(rem===10) speak('Nog tien seconden.');
+    if(rem===3) speak('Drie, twee, één.');
+    if(rem<=0){
+      clearInterval(restIntervalId);
+      document.getElementById('rest-overlay').classList.remove('visible');
+      proceedAfterRest(isLastSet);
+    }
+  },1000);
+}
+
+function skipRest(){
+  clearInterval(restIntervalId); synth.cancel();
+  const ex=workouts[currentDay][exerciseOrder[exIdx]];
+  const isLastSet=setIdx>=ex.sets.length-1;
+  document.getElementById('rest-overlay').classList.remove('visible');
+  proceedAfterRest(isLastSet);
+}
+
+function proceedAfterRest(isLastSet){
+  if(isLastSet){exIdx++;setIdx=0;}else{setIdx++;}
+  loadExercise();
+  const ex=workouts[currentDay][exerciseOrder[exIdx]];
+  const kg=getWeight(currentDay,exerciseOrder[exIdx]);
+  const set=ex.sets[setIdx];
+  setTimeout(()=>{
+    speak(`${ex.name}. Set ${setIdx+1}. ${kg!==null?formatKg(kg)+' kilo, ':''}${set.reps} herhalingen. Druk op start.`,0.95);
+  },300);
+}
+
+function endWorkout(){
+  document.getElementById('rest-overlay').classList.remove('visible');
+  document.getElementById('done-sub').textContent=`Dag ${currentDay} voltooid 💥\nGoed bezig David. Rust goed uit.`;
+  showScreen('done');
+  setTimeout(()=>speak('Dag klaar! Geweldig getraind, David. Goed bezig!'),500);
+  releaseWakeLock();
+}
+
+// ── LOCALSTORAGE: persist weight overrides ──
+const STORAGE_KEY='trainer_weights_v1';
+
+function saveWeights(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(weightOverrides)); }catch(e){}
+}
+
+function loadWeights(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){ const obj=JSON.parse(raw); Object.assign(weightOverrides,obj); }
+  }catch(e){}
+}
+
+function adjustInlineWeight(delta){
+  const origIdx=exerciseOrder[exIdx];
+  const key=`${currentDay}:${origIdx}`;
+  const current=getWeight(currentDay,origIdx);
+  if(current===null) return;
+  const newVal=Math.max(0, Math.round((current+delta)*100)/100);
+  weightOverrides[key]=newVal;
+  document.getElementById('inline-weight-val').textContent=formatKg(newVal)+' kg';
+  updateExerciseMeta();
+  saveWeights();
+}
+
+function showInlineWeightEditor(){
+  const origIdx=exerciseOrder[exIdx];
+  const kg=getWeight(currentDay,origIdx);
+  const editor=document.getElementById('inline-weight-editor');
+  if(kg===null){ editor.style.display='none'; return; }
+  editor.style.display='block';
+  document.getElementById('inline-weight-val').textContent=formatKg(kg)+' kg';
+}
+
+function hideInlineWeightEditor(){
+  document.getElementById('inline-weight-editor').style.display='none';
+}
+
+// adjustWeight = rest overlay weight editor
+function adjustWeight(delta){
+  const targetOrigIdx=restEditingOrigIdx;
+  if(targetOrigIdx===null||targetOrigIdx===undefined) return;
+  const key=`${currentDay}:${targetOrigIdx}`;
+  const current=getWeight(currentDay,targetOrigIdx);
+  if(current===null) return;
+  const newVal=Math.max(0, Math.round((current+delta)*100)/100);
+  weightOverrides[key]=newVal;
+  document.getElementById('weight-val').textContent=formatKg(newVal)+' kg';
+  updateExerciseMeta();
+  saveWeights();
+}
+
+loadWeights(); // load on startup
+
+// ── WAKE LOCK ──
+let wakeLock=null;
+
+async function requestWakeLock(){
+  try{
+    if('wakeLock' in navigator){
+      wakeLock=await navigator.wakeLock.request('screen');
+    }
+  }catch(e){}
+}
+
+function releaseWakeLock(){
+  if(wakeLock){ wakeLock.release(); wakeLock=null; }
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && setRunning) requestWakeLock();
+});
+
+// ── SERVICE WORKER ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
