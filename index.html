@@ -50,6 +50,22 @@
   .exercise-name { font-family:'Bebas Neue',sans-serif; font-size:40px; line-height:1; }
   .exercise-meta { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; margin-bottom:12px; }
 
+  /* GIF PREVIEW */
+  .gif-area {
+    margin-bottom:14px; border-radius:12px; overflow:hidden;
+    background:var(--panel); border:1px solid var(--border);
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .gif-area img {
+    width:100%; max-height:200px; object-fit:cover; display:block;
+    border-radius:12px 12px 0 0;
+  }
+  .gif-tip {
+    font-size:12px; color:var(--muted); padding:8px 12px;
+    text-align:center; line-height:1.4; font-style:italic;
+  }
+  .gif-tip:empty { display:none; }
+
   /* INLINE WEIGHT EDITOR */
   .inline-weight-editor { margin-bottom:16px; padding:12px 14px; background:rgba(232,255,71,0.04); border:1px solid rgba(232,255,71,0.15); border-radius:10px; }
   .iwe-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; }
@@ -94,13 +110,6 @@
   .action-btn.running { background:var(--panel); border:1px solid var(--border); color:var(--muted); cursor:default; }
   .action-btn.done { background:#333; color:var(--muted); cursor:default; }
   .action-btn.start:active { transform:scale(0.97); }
-  .restart-btn {
-    background:transparent; border:1px solid var(--border); color:var(--muted);
-    border-radius:10px; padding:10px 18px; font-size:12px; cursor:pointer;
-    font-family:'DM Sans',sans-serif; text-transform:uppercase; letter-spacing:1px;
-    margin-bottom:6px; -webkit-appearance:none; touch-action:manipulation;
-  }
-  .restart-btn:active { background:var(--border); }
 
   .coach-bubble { background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:0 12px 12px 0; padding:14px 16px; font-size:14px; line-height:1.5; font-style:italic; margin:10px 20px 16px; min-height:52px; }
 
@@ -209,12 +218,22 @@
     <div class="day-card">
       <div class="label">DAG A</div>
       <div class="exercises-list">Leg Press · Chest Press · Lat Pulldown<br>Seated Row · Triceps · Bicep Curl · Cable Crunch</div>
-      <button class="start-btn" onclick="startWorkout('A')">Start Dag A →</button>
+      <button class="start-btn" onclick="startWorkout('A')">🏋️ Start Dag A</button>
     </div>
     <div class="day-card day-b">
       <div class="label">DAG B</div>
       <div class="exercises-list">Leg Extension · Leg Curls · Chest Press · Push Up<br>Lat Pulldown · Seated Row · Lateral Raise · Hanging Leg Raise</div>
-      <button class="start-btn" onclick="startWorkout('B')">Start Dag B →</button>
+      <button class="start-btn" style="background:var(--accent2);" onclick="startWorkout('B')">🏋️ Start Dag B</button>
+    </div>
+    <div class="day-card" style="border-color:#3a2a5a;">
+      <div class="label" style="color:#a78bfa;">THUIS A</div>
+      <div class="exercises-list">Split Squat · Wide Push Up · Table Row<br>Superman · Diamond Push Up · Curl · Leg Raise</div>
+      <button class="start-btn" style="background:#a78bfa;" onclick="startWorkout('C')">🏠 Start Thuis A</button>
+    </div>
+    <div class="day-card" style="border-color:#3a1a2a;">
+      <div class="label" style="color:#f472b6;">THUIS B</div>
+      <div class="exercises-list">Wall Sit · Nordic Curl · Wide Push Up · Push Up<br>Table Row · Pike Push Up · Leg Raise</div>
+      <button class="start-btn" style="background:#f472b6;" onclick="startWorkout('D')">🏠 Start Thuis B</button>
     </div>
   </div>
   <div style="font-size:11px;color:var(--muted);text-align:center;padding-bottom:8px;">De trainer telt automatisch. Zet volume aan.</div>
@@ -250,6 +269,12 @@
     <div class="exercise-name" id="exercise-name">Leg Press</div>
     <div class="exercise-meta" id="exercise-meta"></div>
 
+    <!-- GIF preview — zichtbaar vóór set start -->
+    <div class="gif-area" id="gif-area">
+      <img id="exercise-gif" src="" alt="" onerror="this.parentElement.style.display='none'"/>
+      <div class="gif-tip" id="gif-tip"></div>
+    </div>
+
     <!-- Inline weight editor — visible before set starts -->
     <div class="inline-weight-editor" id="inline-weight-editor">
       <div class="iwe-label">Gewicht aanpassen</div>
@@ -282,7 +307,6 @@
       </div>
     </div>
     <button class="action-btn start" id="action-btn" onclick="handleBtn()">START SET</button>
-    <button class="restart-btn" onclick="restartExercise()">↺ Herstart oefening</button>
   </div>
   <div class="drawer-toggle" onclick="toggleDrawer()">
     <div>📋 Oefeningen overzicht</div>
@@ -346,6 +370,38 @@ const workouts = {
     {name:"Seated Row",kg:45,sets:[{reps:12},{reps:12},{reps:12}],rest:90},
     {name:"Lateral Raise",kg:5,sets:[{reps:15},{reps:15},{reps:15}],rest:90},
     {name:"Hanging Leg Raise",kg:null,sets:[{reps:15},{reps:15},{reps:15}],rest:60},
+  ],
+  C:[
+    {name:"Bulgarian Split Squat",kg:null,sets:[{reps:10},{reps:10},{reps:10}],rest:90,unilateral:true,
+     tip:"Achterste voet op stoel, voorste voet ver naar voren — diep zakken"},
+    {name:"Wide Push Up",kg:null,sets:[{reps:12},{reps:12},{reps:12}],rest:90,
+     tip:"Handen breed, borst tot vlak boven de grond"},
+    {name:"Table Row",kg:null,sets:[{reps:12},{reps:12},{reps:12}],rest:90,
+     tip:"Lig onder een stevige tafel, trek borst naar tafelblad"},
+    {name:"Superman Hold",kg:null,sets:[{reps:15},{reps:15},{reps:15}],rest:90,
+     tip:"Lig op buik, hef armen en benen tegelijk — houd 2 sec vast bovenin"},
+    {name:"Diamond Push Up",kg:null,sets:[{reps:12},{reps:12},{reps:12}],rest:90,
+     tip:"Handen in driehoek onder borst, ellebogen langs het lichaam"},
+    {name:"Bicep Curl met rugzak",kg:null,sets:[{reps:12},{reps:12},{reps:12}],rest:90,
+     tip:"Vul rugzak met boeken, curl gecontroleerd omhoog"},
+    {name:"Lying Leg Raise",kg:null,sets:[{reps:15},{reps:15},{reps:15}],rest:60,
+     tip:"Rug plat op grond, benen gestrekt — langzaam omhoog en neer"},
+  ],
+  D:[
+    {name:"Wall Sit",kg:null,sets:[{reps:45},{reps:45},{reps:45}],rest:90,timed:true,
+     tip:"Rug tegen muur, dijen parallel aan de grond — houd vast"},
+    {name:"Nordic Hamstring Curl",kg:null,sets:[{reps:8},{reps:8},{reps:8}],rest:90,
+     tip:"Klem voeten onder bank, laat jezelf langzaam zakken met rechte rug"},
+    {name:"Wide Push Up",kg:null,sets:[{reps:12},{reps:12},{reps:12}],rest:120,
+     tip:"Handen breed, focus op borststrekking"},
+    {name:"Standard Push Up",kg:null,sets:[{reps:10},{reps:10},{reps:10}],rest:120,
+     tip:"Schouderbreed, rechte lijn van hoofd tot hak"},
+    {name:"Table Row",kg:null,sets:[{reps:12},{reps:12},{reps:12}],rest:90,
+     tip:"Lig onder stevige tafel, trek borst naar tafelblad"},
+    {name:"Pike Push Up",kg:null,sets:[{reps:12},{reps:12},{reps:12}],rest:90,
+     tip:"Begin in omgekeerde V-positie, buig ellebogen en laat hoofd zakken"},
+    {name:"Lying Leg Raise",kg:null,sets:[{reps:15},{reps:15},{reps:15}],rest:60,
+     tip:"Benen gestrekt omhoog en gecontroleerd neer"},
   ]
 };
 
@@ -353,7 +409,6 @@ const TEMPO_UP=2000, TEMPO_HOLD=1000, TEMPO_DOWN=3000;
 let currentDay='A', exIdx=0, setIdx=0, currentRep=0, targetRep=0;
 let setRunning=false, setFinished=false;
 let unilateralPhase=null; // null | 'rechts' | 'links'
-let repPrefix=''; // gesproken vóór het eerste repnummer, bijv. 'Los! '
 let restIntervalId=null, phaseTimeoutId=null;
 const synth=window.speechSynthesis;
 let femaleVoice=null;
@@ -492,27 +547,8 @@ function goHome(){
   clearTimeout(phaseTimeoutId);
   clearInterval(restIntervalId);
   setRunning=false;
-  releaseWakeLock();
   document.getElementById('rest-overlay').classList.remove('visible');
   showScreen('home');
-}
-
-function restartExercise(){
-  // Stop alles: spraak, rep-cyclus, eventuele rusttimer
-  synth.cancel();
-  clearTimeout(phaseTimeoutId);
-  clearInterval(restIntervalId);
-  setRunning=false;
-  repPrefix='';
-  unilateralPhase=null;
-  document.getElementById('rest-overlay').classList.remove('visible');
-  // Terug naar set 1 van de huidige oefening
-  setIdx=0;
-  loadExercise();
-  const ex=workouts[currentDay][exerciseOrder[exIdx]];
-  setTimeout(()=>{
-    speak(`Oké, ${ex.name} opnieuw vanaf set één. Druk op start als je klaar staat.`);
-  },300);
 }
 
 // exerciseOrder holds indices into workouts[currentDay] — allows reordering for skips
@@ -627,7 +663,8 @@ function startWorkout(day){
   exerciseOrder=workouts[day].map((_,i)=>i);
   showScreen('workout');
   buildTempoBar();
-  document.getElementById('day-badge').textContent='DAG '+day;
+  const dayLabels={A:'DAG A',B:'DAG B',C:'THUIS A',D:'THUIS B'};
+  document.getElementById('day-badge').textContent=dayLabels[day]||'DAG '+day;
   document.getElementById('drawer-arrow').textContent='▼';
   document.getElementById('exercise-drawer').classList.remove('open');
   loadExercise();
@@ -645,7 +682,9 @@ function loadExercise(){
 
   document.getElementById('exercise-name').textContent=ex.name;
   const kg=getWeight(currentDay,exerciseOrder[exIdx]);
-  document.getElementById('exercise-meta').textContent=`Set ${setIdx+1} van ${ex.sets.length} · ${kg!==null?formatKg(kg)+' kg · ':''}${targetRep} reps`;
+  const repLabel=ex.timed?`${targetRep} sec`:`${targetRep} reps`;
+  document.getElementById('exercise-meta').textContent=`Set ${setIdx+1} van ${ex.sets.length} · ${kg!==null?formatKg(kg)+' kg · ':''}${repLabel}`;
+  document.getElementById('rep-of').textContent=`van ${targetRep}`;
   document.getElementById('ex-count').textContent=`${exIdx+1}/${exerciseOrder.length}`;
   document.getElementById('progress-fill').style.width=(exIdx/exerciseOrder.length*100)+'%';
 
@@ -661,11 +700,24 @@ function loadExercise(){
   litBar('none');
   setPhaseUI('','—');
 
+  // GIF
+  const gifEl=document.getElementById('exercise-gif');
+  const gifArea=document.getElementById('gif-area');
+  const tipEl=document.getElementById('gif-tip');
+  const gifUrl = ex.gif || findGif(ex.name);
+  if(gifUrl){
+    gifEl.src=gifUrl;
+    gifArea.style.display='flex';
+    tipEl.textContent=ex.tip||'';
+  } else {
+    gifArea.style.display='none';
+  }
+
   const btn=document.getElementById('action-btn');
   btn.textContent='START SET';
   btn.className='action-btn start';
   document.getElementById('coach-bubble').textContent='Klaar? Druk op START SET.';
-  showInlineWeightEditor(); // show before set starts
+  showInlineWeightEditor();
   if(drawerOpen) renderDrawer();
 }
 
@@ -695,6 +747,7 @@ function handleBtn(){
 function startSet(){
   setRunning=true; currentRep=0;
   hideInlineWeightEditor();
+  document.getElementById('gif-area').style.display='none'; // verberg GIF tijdens set
   updateRepUI(0,targetRep);
 
   // Unilateral: begin met rechts
@@ -714,10 +767,10 @@ function startSet(){
     btn.textContent='BEZIG…';
     if(unilateralPhase){
       document.getElementById('coach-bubble').textContent='Rechts — volg het tempo.';
-      repPrefix='Los! Rechts. ';
+      speak('Los! Rechts. Één. Omhoog.',1.0);
     } else {
       document.getElementById('coach-bubble').textContent='Volg het tempo — omhoog, vasthouden, neer.';
-      repPrefix='Los! ';
+      speak('Los! Één. Omhoog.',1.0);
     }
     runRep();
   },3000);
@@ -727,12 +780,11 @@ function runRep(){
   if(!setRunning) return;
   const repNum=currentRep+1;
 
-  // Nummer + "Omhoog" — aan het begin van elke rep
   setPhaseUI('up','OMHOOG'); litBar('up');
-  speak(`${repPrefix}${repNum}. Omhoog.`,1.1);
-  repPrefix='';
+  speak(`${repNum}.`, 1.0);
+  setTimeout(()=>{ if(setRunning) speak('Omhoog.', 1.1); }, 600);
 
-  // Na 2s up: vasthouden
+  // Na 2s: vasthouden
   phaseTimeoutId=setTimeout(()=>{
     if(!setRunning) return;
     setPhaseUI('hold','VASTHOUDEN'); litBar('hold');
@@ -740,9 +792,9 @@ function runRep(){
 
     // Na 1s hold: neer
     phaseTimeoutId=setTimeout(()=>{
-        if(!setRunning) return;
-        setPhaseUI('down','NEER'); litBar('down');
-        speak('Neer.',1.0);
+      if(!setRunning) return;
+      setPhaseUI('down','NEER'); litBar('down');
+      speak('Neer.',1.0);
 
         // Na 3s neer: rep klaar
         phaseTimeoutId=setTimeout(()=>{
@@ -770,7 +822,8 @@ function runRep(){
                 if(!setRunning) return;
                 btn.textContent='BEZIG…';
                 document.getElementById('coach-bubble').textContent='Links — volg het tempo.';
-                repPrefix='Los! Links. ';
+                speak('Los!', 1.0);
+    setTimeout(()=>{ if(setRunning){ speak('Omhoog.', 1.1); }}, 500);
                 runRep();
               },3000);
             } else {
@@ -793,7 +846,7 @@ function runRep(){
           }
         },TEMPO_DOWN); // 3000ms neer
       },TEMPO_HOLD);   // 1000ms hold
-  },TEMPO_UP);         // 2000ms omhoog
+  },TEMPO_UP);         // 2000ms up
 }
 
 // weightOverrides: { 'A:0': 80, 'B:3': 12, ... } — keyed by day:exerciseIndex
@@ -985,40 +1038,81 @@ function adjustWeight(delta){
   saveWeights();
 }
 
-loadWeights(); // load on startup
+const EXERCISE_DB_URL = 'https://raw.githubusercontent.com/mohamedatef90/exercise-library/main/exercises.json';
+const GIF_BASE = 'https://raw.githubusercontent.com/mohamedatef90/exercise-library/main/gifs/';
+let exerciseDB = [];
 
-// ── WAKE LOCK ──
+// Map our exercise names to search terms in the database
+const GIF_SEARCH = {
+  'Leg Press Horizontal':    'leg press',
+  'Chest Press':             'chest press',
+  'Lat Pulldown':            'lat pulldown',
+  'Seated Row':              'seated row',
+  'Triceps Pushdown':        'triceps pushdown',
+  'Bicep Curl':              'bicep curl',
+  'Cable Crunch':            'cable crunch',
+  'Leg Extension':           'leg extension',
+  'Standing Leg Curls':      'leg curl',
+  'Push Up':                 'push-up',
+  'Lateral Raise':           'lateral raise',
+  'Hanging Leg Raise':       'hanging leg raise',
+  'Bulgarian Split Squat':   'bulgarian split squat',
+  'Wide Push Up':            'wide push-up',
+  'Table Row':               'inverted row',
+  'Superman Hold':           'superman',
+  'Diamond Push Up':         'diamond push',
+  'Bicep Curl met rugzak':   'bicep curl',
+  'Lying Leg Raise':         'lying leg raise',
+  'Wall Sit':                'wall sit',
+  'Nordic Hamstring Curl':   'nordic hamstring',
+  'Standard Push Up':        'push-up',
+  'Pike Push Up':            'pike push',
+};
+
+async function loadExerciseDB() {
+  try {
+    const res = await fetch(EXERCISE_DB_URL);
+    exerciseDB = await res.json();
+    console.log('Exercise DB loaded:', exerciseDB.length, 'exercises');
+  } catch(e) {
+    console.log('Could not load exercise DB:', e);
+  }
+}
+
+function findGif(exerciseName) {
+  if(!exerciseDB.length) return null;
+  const query = (GIF_SEARCH[exerciseName] || exerciseName).toLowerCase();
+  const terms = query.split(' ');
+  // Score each exercise by how many terms match
+  let best = null, bestScore = 0;
+  for(const ex of exerciseDB) {
+    const name = ex.name.toLowerCase();
+    let score = 0;
+    for(const t of terms) if(name.includes(t)) score++;
+    if(score > bestScore) { bestScore = score; best = ex; }
+  }
+  return best ? GIF_BASE + best.gif : null;
+}
+
+loadExerciseDB();
+loadWeights();
 let wakeLock=null;
-let keepAwake=false; // true zolang een workout actief is
 
 async function requestWakeLock(){
-  keepAwake=true;
   try{
     if('wakeLock' in navigator){
       wakeLock=await navigator.wakeLock.request('screen');
-      // iOS/Safari laat de lock soms los (app-switch, melding, korte vergrendeling)
-      // — vraag hem dan automatisch opnieuw aan zolang de workout loopt.
-      wakeLock.addEventListener('release',()=>{
-        wakeLock=null;
-        if(keepAwake && document.visibilityState==='visible') requestWakeLock();
-      });
     }
   }catch(e){}
 }
 
 function releaseWakeLock(){
-  keepAwake=false;
   if(wakeLock){ wakeLock.release(); wakeLock=null; }
 }
 
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && keepAwake && !wakeLock) requestWakeLock();
+  if(document.visibilityState==='visible' && setRunning) requestWakeLock();
 });
-
-// Extra vangnet: bij elke tik tijdens de workout opnieuw proberen als de lock weg is
-document.addEventListener('touchstart',()=>{
-  if(keepAwake && !wakeLock) requestWakeLock();
-},{passive:true});
 
 // ── SERVICE WORKER ──
 if('serviceWorker' in navigator){
