@@ -1092,18 +1092,32 @@ function findGif(exerciseName) {
   return EXERCISE_IMAGES[exerciseName] || null;
 }
 loadWeights();
-let wakeLock=null;
 
-async function requestWakeLock(){
-  try{
-    if('wakeLock' in navigator){
-      wakeLock=await navigator.wakeLock.request('screen');
-    }
-  }catch(e){}
+// ── NO-SLEEP: iOS-proof via onzichtbare video ──
+let noSleepVideo = null;
+let wakeLock = null;
+
+function requestWakeLock(){
+  // Moderne Wake Lock API (Chrome Android)
+  if('wakeLock' in navigator){
+    navigator.wakeLock.request('screen').then(l=>{ wakeLock=l; }).catch(()=>{});
+  }
+  // iOS Safari: nosleep.mp4 in loop houdt scherm wakker
+  if(!noSleepVideo){
+    noSleepVideo = document.createElement('video');
+    noSleepVideo.setAttribute('playsinline','');
+    noSleepVideo.setAttribute('muted','');
+    noSleepVideo.setAttribute('loop','');
+    noSleepVideo.style.cssText='position:fixed;width:1px;height:1px;opacity:0.01;top:-2px;left:-2px;pointer-events:none;';
+    noSleepVideo.src='nosleep.mp4';
+    document.body.appendChild(noSleepVideo);
+  }
+  noSleepVideo.play().catch(()=>{});
 }
 
 function releaseWakeLock(){
   if(wakeLock){ wakeLock.release(); wakeLock=null; }
+  if(noSleepVideo) noSleepVideo.pause();
 }
 
 document.addEventListener('visibilitychange',()=>{
