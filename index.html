@@ -271,7 +271,15 @@
 
     <!-- GIF preview — zichtbaar vóór set start -->
     <div class="gif-area" id="gif-area">
-      <img id="exercise-gif" src="" alt="" onerror="this.parentElement.style.display='none'"/>
+      <img id="exercise-gif" src="" alt=""
+        onerror="this.style.display='none'; document.getElementById('gif-fallback').style.display='flex';"/>
+      <div id="gif-fallback" style="display:none;flex-direction:column;align-items:center;gap:8px;padding:16px;">
+        <div style="font-size:11px;color:var(--muted);">Geen afbeelding beschikbaar</div>
+        <a id="gif-youtube-link" href="#" target="_blank"
+          style="font-size:12px;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:6px;padding:6px 14px;">
+          ▶ Bekijk op YouTube
+        </a>
+      </div>
       <div class="gif-tip" id="gif-tip"></div>
     </div>
 
@@ -700,17 +708,28 @@ function loadExercise(){
   litBar('none');
   setPhaseUI('','—');
 
-  // GIF
+  // GIF / afbeelding
   const gifEl=document.getElementById('exercise-gif');
   const gifArea=document.getElementById('gif-area');
   const tipEl=document.getElementById('gif-tip');
+  const fallbackEl=document.getElementById('gif-fallback');
+  const ytLink=document.getElementById('gif-youtube-link');
   const gifUrl = ex.gif || findGif(ex.name);
+
+  // Reset fallback
+  gifEl.style.display='block';
+  fallbackEl.style.display='none';
+  ytLink.href=`https://www.youtube.com/results?search_query=how+to+${encodeURIComponent(ex.name)}+exercise`;
+
   if(gifUrl){
     gifEl.src=gifUrl;
     gifArea.style.display='flex';
     tipEl.textContent=ex.tip||'';
   } else {
-    gifArea.style.display='none';
+    gifEl.style.display='none';
+    fallbackEl.style.display='flex';
+    gifArea.style.display='flex';
+    tipEl.textContent=ex.tip||'';
   }
 
   const btn=document.getElementById('action-btn');
@@ -1038,63 +1057,40 @@ function adjustWeight(delta){
   saveWeights();
 }
 
-const EXERCISE_DB_URL = 'https://raw.githubusercontent.com/mohamedatef90/exercise-library/main/exercises.json';
-const GIF_BASE = 'https://raw.githubusercontent.com/mohamedatef90/exercise-library/main/gifs/';
-let exerciseDB = [];
-
-// Map our exercise names to search terms in the database
-const GIF_SEARCH = {
-  'Leg Press Horizontal':    'leg press',
-  'Chest Press':             'chest press',
-  'Lat Pulldown':            'lat pulldown',
-  'Seated Row':              'seated row',
-  'Triceps Pushdown':        'triceps pushdown',
-  'Bicep Curl':              'bicep curl',
-  'Cable Crunch':            'cable crunch',
-  'Leg Extension':           'leg extension',
-  'Standing Leg Curls':      'leg curl',
-  'Push Up':                 'push-up',
-  'Lateral Raise':           'lateral raise',
-  'Hanging Leg Raise':       'hanging leg raise',
-  'Bulgarian Split Squat':   'bulgarian split squat',
-  'Wide Push Up':            'wide push-up',
-  'Table Row':               'inverted row',
-  'Superman Hold':           'superman',
-  'Diamond Push Up':         'diamond push',
-  'Bicep Curl met rugzak':   'bicep curl',
-  'Lying Leg Raise':         'lying leg raise',
-  'Wall Sit':                'wall sit',
-  'Nordic Hamstring Curl':   'nordic hamstring',
-  'Standard Push Up':        'push-up',
-  'Pike Push Up':            'pike push',
+// ── EXERCISE IMAGES ──
+// Wger.de is een open-source fitness platform met betrouwbare afbeeldingen
+const WGER = 'https://wger.de/static/images/exercises/';
+const EXERCISE_IMAGES = {
+  // Sportschool A & B
+  'Leg Press Horizontal':   'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Leg_press.jpg/400px-Leg_press.jpg',
+  'Chest Press':            'https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Machine_chest_press.jpg/400px-Machine_chest_press.jpg',
+  'Lat Pulldown':           'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Lat_machine_pulldown.jpg/400px-Lat_machine_pulldown.jpg',
+  'Seated Row':             'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Seated_cable_row.jpg/400px-Seated_cable_row.jpg',
+  'Triceps Pushdown':       'https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Triceps_pushdown_cable.jpg/400px-Triceps_pushdown_cable.jpg',
+  'Bicep Curl':             'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Dumbbell_bicep_curl.jpg/400px-Dumbbell_bicep_curl.jpg',
+  'Cable Crunch':           'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Crunch_abdominal_exercise.jpg/400px-Crunch_abdominal_exercise.jpg',
+  'Leg Extension':          'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Leg_extension_exercise.jpg/400px-Leg_extension_exercise.jpg',
+  'Standing Leg Curls':     'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Hamstring_curl.jpg/400px-Hamstring_curl.jpg',
+  'Push Up':                'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Push_ups.jpg/400px-Push_ups.jpg',
+  'Lateral Raise':          'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Lateral_raise.jpg/400px-Lateral_raise.jpg',
+  'Hanging Leg Raise':      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Hanging_leg_raises.jpg/400px-Hanging_leg_raises.jpg',
+  // Thuis A & B
+  'Bulgarian Split Squat':  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Bulgarian_split_squat.jpg/400px-Bulgarian_split_squat.jpg',
+  'Wide Push Up':           'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Push_ups.jpg/400px-Push_ups.jpg',
+  'Table Row':              'https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Inverted_row.jpg/400px-Inverted_row.jpg',
+  'Superman Hold':          'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Superman_exercise.jpg/400px-Superman_exercise.jpg',
+  'Diamond Push Up':        'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Diamond_push-up.jpg/400px-Diamond_push-up.jpg',
+  'Bicep Curl met rugzak':  'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Dumbbell_bicep_curl.jpg/400px-Dumbbell_bicep_curl.jpg',
+  'Lying Leg Raise':        'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Lying_leg_raises.jpg/400px-Lying_leg_raises.jpg',
+  'Wall Sit':               'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Wall_squat.jpg/400px-Wall_squat.jpg',
+  'Nordic Hamstring Curl':  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Nordic_hamstring_curl.jpg/400px-Nordic_hamstring_curl.jpg',
+  'Standard Push Up':       'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Push_ups.jpg/400px-Push_ups.jpg',
+  'Pike Push Up':           'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Push_ups.jpg/400px-Push_ups.jpg',
 };
 
-async function loadExerciseDB() {
-  try {
-    const res = await fetch(EXERCISE_DB_URL);
-    exerciseDB = await res.json();
-    console.log('Exercise DB loaded:', exerciseDB.length, 'exercises');
-  } catch(e) {
-    console.log('Could not load exercise DB:', e);
-  }
-}
-
 function findGif(exerciseName) {
-  if(!exerciseDB.length) return null;
-  const query = (GIF_SEARCH[exerciseName] || exerciseName).toLowerCase();
-  const terms = query.split(' ');
-  // Score each exercise by how many terms match
-  let best = null, bestScore = 0;
-  for(const ex of exerciseDB) {
-    const name = ex.name.toLowerCase();
-    let score = 0;
-    for(const t of terms) if(name.includes(t)) score++;
-    if(score > bestScore) { bestScore = score; best = ex; }
-  }
-  return best ? GIF_BASE + best.gif : null;
+  return EXERCISE_IMAGES[exerciseName] || null;
 }
-
-loadExerciseDB();
 loadWeights();
 let wakeLock=null;
 
